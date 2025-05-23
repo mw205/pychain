@@ -34,7 +34,6 @@ class Event(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    event_type = Column(String, nullable=False) # e.g., "SHIPPED", "RECEIVED"
     location = Column(String, nullable=False)
     event_type = Column(SAEnum(EventTypeEnum, name="event_type_enum"), nullable=False)
     notes = Column(String, nullable=True)
