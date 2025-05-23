@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} - Supply Chain Tracker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Product Management</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/ui/products">Products</a>
+            <a href="/ui/track">Track Product</a>
+            <span id="auth-links" style="display:none;"> <button onclick="showLogin()">Login</button>
+            </span>
+            <span id="user-info">
+                Logged in as: <strong id="username-display"></strong> (<em id="user-role-display"></em>)
+                <button onclick="logout()">Logout</button>
+            </span>
+        </nav>
+    </header>
+
+    <main>
+        <section id="add-product-section" style="display:none;"> <h2>Add New Product</h2>
+            <form id="add-product-form">
+                <label for="product-name">Name:</label>
+                <input type="text" id="product-name" required><br>
+                <label for="product-sku">SKU:</label>
+                <input type="text" id="product-sku" required><br>
+                <label for="product-description">Description:</label>
+                <textarea id="product-description"></textarea><br>
+                <button type="submit">Add Product</button>
+                <p id="product-form-error" class="error-message"></p>
+                <p id="product-form-success" class="success-message"></p>
+            </form>
+        </section>
+
+        <section>
+            <h2>All Products</h2>
+            <table id="products-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>SKU</th>
+                        <th>Description</th>
+                        <th>Current Status</th>
+                        <th>Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+            <p id="products-table-error" class="error-message"></p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Supply Chain Tracker</p>
+    </footer>
+    <script src="/static/js/script.js"></script>
+    <script>
+        // Specific JS for this page
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus(); // From global script.js
+            fetchProducts();
+
+            const userRole = localStorage.getItem('userRole');
+            if (userRole === 'supplier' || userRole === 'admin') {
+                document.getElementById('add-product-section').style.display = 'block';
+            }
+
+            const addProductForm = document.getElementById('add-product-form');
+            if(addProductForm){
+                addProductForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const name = document.getElementById('product-name').value;
+                    const sku = document.getElementById('product-sku').value;
+                    const description = document.getElementById('product-description').value;
+                    const token = localStorage.getItem('accessToken');
+                    const errorP = document.getElementById('product-form-error');
+                    const successP = document.getElementById('product-form-success');
+                    errorP.textContent = '';
+                    successP.textContent = '';
+
+                    try {
+                        const response = await fetch('/products/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ name, sku, description })
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                        }
+                        const newProduct = await response.json();
+                        successP.textContent = `Product "${newProduct.name}" added successfully!`;
+                        addProductForm.reset();
+                        fetchProducts(); // Refresh table
+                    } catch (error) {
+                        console.error('Error adding product:', error);
+                        errorP.textContent = `Error adding product: ${error.message}`;
+                    }
+                });
+            }
+        });
+
+        async function fetchProducts() {
+            const token = localStorage.getItem('accessToken');
+            const tableBody = document.querySelector('#products-table tbody');
+            const errorP = document.getElementById('products-table-error');
+            tableBody.innerHTML = ''; // Clear existing rows
+            errorP.textContent = '';
+
+            if (!token) {
+                errorP.textContent = "Please login to view products.";
+                // Optionally redirect to login or show login form
+                return;
+            }
+
+            try {
+                const response = await fetch('/products/', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    if (response.status === 401) {
+                         errorP.textContent = "Session expired or invalid. Please login again.";
+                         logout(); // Clear token and update UI
+                         return;
+                    }
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                const products = await response.json();
+                if (products.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="6">No products found.</td></tr>';
+                    return;
+                }
+                products.forEach(product => {
+                    const row = tableBody.insertRow();
+                    row.insertCell().textContent = product.id;
+                    row.insertCell().textContent = product.name;
+                    row.insertCell().textContent = product.sku;
+                    row.insertCell().textContent = product.description || 'N/A';
+                    row.insertCell().textContent = product.current_status || 'N/A';
+                    row.insertCell().textContent = new Date(product.last_updated).toLocaleString();
+                });
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                errorP.textContent = `Error fetching products: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

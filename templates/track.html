@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} - Supply Chain Tracker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Track Product Journey</h1>
+         <nav>
+            <a href="/">Home</a>
+            <a href="/ui/products">Products</a>
+            <a href="/ui/track">Track Product</a>
+            <span id="auth-links" style="display:none;">
+                <button onclick="showLogin()">Login</button>
+            </span>
+            <span id="user-info">
+                 Logged in as: <strong id="username-display"></strong> (<em id="user-role-display"></em>)
+                <button onclick="logout()">Logout</button>
+            </span>
+        </nav>
+    </header>
+
+    <main>
+        <section id="track-product-form-section">
+            <h2>Track Product by ID</h2>
+            <form id="track-product-form">
+                <label for="track-product-id">Product ID:</label>
+                <input type="number" id="track-product-id" required><br>
+                <button type="submit">Track Product</button>
+                <p id="track-form-error" class="error-message"></p>
+            </form>
+        </section>
+
+        <section id="product-history-section" style="display:none;">
+            <h2>Product Details</h2>
+            <div id="product-info">
+                </div>
+            <h3>History / Events</h3>
+            <table id="events-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Event Type</th>
+                        <th>Location</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </section>
+
+        <section id="add-event-section" style="display:none;"> <h2>Record New Event for Product <span id="event-product-id-display"></span></h2>
+            <form id="add-event-form">
+                <input type="hidden" id="event-product-id">
+
+                <label for="event-type">Event Type:</label>
+                <select id="event-type" name="event_type" required>
+                    <option value="" disabled selected>-- Select Event Type --</option>
+                    <option value="MANUFACTURED">Manufactured</option>
+                    <option value="PACKAGED">Packaged</option>
+                    <option value="SHIPPED_FROM_SUPPLIER">Shipped from Supplier</option>
+                    <option value="RECEIVED_AT_WAREHOUSE">Received at Warehouse</option>
+                    <option value="IN_TRANSIT_TO_DISTRIBUTOR">In Transit to Distributor</option>
+                    <option value="RECEIVED_BY_DISTRIBUTOR">Received by Distributor</option>
+                    <option value="SHIPPED_TO_RETAILER">Shipped to Retailer</option>
+                    <option value="RECEIVED_BY_RETAILER">Received by Retailer</option>
+                    <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
+                    <option value="DELIVERED_TO_CUSTOMER">Delivered to Customer</option>
+                    <option value="INSPECTION_PASSED">Inspection Passed</option>
+                    <option value="INSPECTION_FAILED">Inspection Failed</option>
+                    <option value="EXCEPTION_LOGGED">Exception Logged</option>
+                    </select><br>
+
+                <label for="event-location">Location:</label>
+                <input type="text" id="event-location" required><br>
+                <label for="event-notes">Notes (Optional):</label>
+                <textarea id="event-notes"></textarea><br>
+                <button type="submit">Record Event</button>
+                <p id="event-form-error" class="error-message"></p>
+                <p id="event-form-success" class="success-message"></p>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Supply Chain Tracker</p>
+    </footer>
+    <script src="/static/js/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+            const trackForm = document.getElementById('track-product-form');
+            const addEventForm = document.getElementById('add-event-form');
+
+            trackForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const productId = document.getElementById('track-product-id').value;
+                await fetchProductHistory(productId);
+            });
+
+            if(addEventForm){
+                addEventForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const productId = document.getElementById('event-product-id').value;
+                    // This line will now get the value from the <select> dropdown
+                    const event_type = document.getElementById('event-type').value;
+                    const location = document.getElementById('event-location').value;
+                    const notes = document.getElementById('event-notes').value;
+                    const token = localStorage.getItem('accessToken');
+                    const errorP = document.getElementById('event-form-error');
+                    const successP = document.getElementById('event-form-success');
+                    errorP.textContent = '';
+                    successP.textContent = '';
+
+                    if (!event_type) { // Basic validation for the select
+                        errorP.textContent = 'Please select an event type.';
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/events/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ product_id: parseInt(productId), event_type, location, notes })
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                        }
+                        const newEvent = await response.json();
+                        successP.textContent = `Event "${newEvent.event_type}" recorded successfully!`;
+                        addEventForm.reset();
+                        // Reset select to placeholder
+                        document.getElementById('event-type').value = "";
+                        document.getElementById('event-product-id').value = productId; // Keep product ID for more events
+                        await fetchProductHistory(productId); // Refresh history
+                    } catch (error) {
+                        console.error('Error recording event:', error);
+                        errorP.textContent = `Error recording event: ${error.message}`;
+                    }
+                });
+            }
+        });
+
+        async function fetchProductHistory(productId) {
+            const token = localStorage.getItem('accessToken');
+            const productInfoDiv = document.getElementById('product-info');
+            const eventsTableBody = document.querySelector('#events-table tbody');
+            const historySection = document.getElementById('product-history-section');
+            const addEventSection = document.getElementById('add-event-section');
+            const eventProductIdDisplay = document.getElementById('event-product-id-display');
+            const eventProductIdInput = document.getElementById('event-product-id');
+            const errorP = document.getElementById('track-form-error');
+
+            productInfoDiv.innerHTML = '';
+            eventsTableBody.innerHTML = '';
+            historySection.style.display = 'none';
+            addEventSection.style.display = 'none';
+            errorP.textContent = '';
+
+
+            if (!token) {
+                errorP.textContent = "Please login to track products.";
+                return;
+            }
+            if (!productId) {
+                errorP.textContent = "Product ID is required.";
+                return;
+            }
+
+            try {
+                const response = await fetch(`/products/${productId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                     if (response.status === 401) {
+                         errorP.textContent = "Session expired or invalid. Please login again.";
+                         logout();
+                         return;
+                    }
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                const productHistory = await response.json();
+
+                productInfoDiv.innerHTML = `
+                    <p><strong>ID:</strong> ${productHistory.id}</p>
+                    <p><strong>Name:</strong> ${productHistory.name}</p>
+                    <p><strong>SKU:</strong> ${productHistory.sku}</p>
+                    <p><strong>Description:</strong> ${productHistory.description || 'N/A'}</p>
+                    <p><strong>Current Status:</strong> ${productHistory.current_status}</p>
+                    <p><strong>Last Updated:</strong> ${new Date(productHistory.last_updated).toLocaleString()}</p>
+                `;
+
+                if (productHistory.events && productHistory.events.length > 0) {
+                    productHistory.events.forEach(event => {
+                        const row = eventsTableBody.insertRow();
+                        row.insertCell().textContent = new Date(event.timestamp).toLocaleString();
+                        row.insertCell().textContent = event.event_type;
+                        row.insertCell().textContent = event.location;
+                        row.insertCell().textContent = event.notes || 'N/A';
+                    });
+                } else {
+                    eventsTableBody.innerHTML = '<tr><td colspan="4">No events found for this product.</td></tr>';
+                }
+                historySection.style.display = 'block';
+
+                const userRole = localStorage.getItem('userRole');
+                if (userRole === 'distributor' || userRole === 'admin' || userRole === 'supplier') { // Supplier might initiate first event too
+                    addEventSection.style.display = 'block';
+                    eventProductIdDisplay.textContent = productHistory.id;
+                    eventProductIdInput.value = productHistory.id;
+                }
+
+            } catch (error) {
+                console.error('Error fetching product history:', error);
+                errorP.textContent = `Error fetching product history: ${error.message}`;
+                historySection.style.display = 'none';
+                addEventSection.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
