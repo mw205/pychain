@@ -61,90 +61,92 @@ supply_chain_tracker/
 ├── requirements.txt      # Python dependencies
 └── README.md
 
-
-
 ## Setup and Running Locally 🚀
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <your-repo-url>
-    cd supply_chain_tracker
-    ```
+1. **Clone the repository:**
 
-2.  **Create and activate a virtual environment:**
-    ```bash
-    python -m venv venv
-    # On Windows
-    # venv\Scripts\activate
-    # On macOS/Linux
-    # source venv/bin/activate
-    ```
+   ```bash
+   git clone <your-repo-url>
+   cd supply_chain_tracker
+   ```
+2. **Create and activate a virtual environment:**
 
-3.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+   ```bash
+   python -m venv venv
+   # On Windows
+   # venv\Scripts\activate
+   # On macOS/Linux
+   # source venv/bin/activate
+   ```
+3. **Install dependencies:**
 
-4.  **Configure Environment Variables:**
-    Copy `.env.example` to a new file named `.env`:
-    ```bash
-    cp .env.example .env
-    ```
-    Open `.env` and set your `SECRET_KEY`. The `DATABASE_URL` defaults to SQLite.
-    ```env
-    DATABASE_URL="sqlite:///./supply_chain.db"
-    SECRET_KEY="your_very_secure_and_random_secret_key_here_please_change_me"
-    ALGORITHM="HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES=30
-    ```
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Configure Environment Variables:**
+   Copy `.env.example` to a new file named `.env`:
 
-5.  **Run the FastAPI application:**
-    From the root `supply_chain_tracker` directory:
-    ```bash
-    uvicorn app.main:app --reload
-    ```
-    The `--reload` flag enables auto-reloading on code changes, useful for development.
+   ```bash
+   cp .env.example .env
+   ```
 
-6.  **Access the application:**
-    -   **API Docs (Swagger UI):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-    -   **API Docs (ReDoc):** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
-    -   **Frontend UI:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+   Open `.env` and set your `SECRET_KEY`. The `DATABASE_URL` defaults to SQLite.
 
-7.  **Initial Users:**
-    The application creates a few default users on startup (for testing):
-    -   Username: `supplier1`, Password: `password123`, Role: `supplier`
-    -   Username: `distributor1`, Password: `password123`, Role: `distributor`
-    -   Username: `admin`, Password: `adminpass`, Role: `admin`
+   ```env
+   DATABASE_URL="sqlite:///./supply_chain.db"
+   SECRET_KEY="your_very_secure_and_random_secret_key_here_please_change_me"
+   ALGORITHM="HS256"
+   ACCESS_TOKEN_EXPIRE_MINUTES=30
+   ```
+5. **Run the FastAPI application:**
+   From the root `supply_chain_tracker` directory:
 
-    You can also register new users through the UI or the `/auth/users/` API endpoint.
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+   The `--reload` flag enables auto-reloading on code changes, useful for development.
+6. **Access the application:**
+
+   - **API Docs (Swagger UI):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+   - **API Docs (ReDoc):** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+   - **Frontend UI:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+7. **Initial Users:**
+   The application creates a few default users on startup (for testing):
+
+   - Username: `supplier1`, Password: `password123`, Role: `supplier`
+   - Username: `distributor1`, Password: `password123`, Role: `distributor`
+   - Username: `admin`, Password: `adminpass`, Role: `admin`
+
+   You can also register new users through the UI or the `/auth/users/` API endpoint.
 
 ## API Endpoints 📖
 
 (Refer to `/docs` or `/redoc` on your running instance for a detailed and interactive API specification.)
 
 Key endpoints include:
--   **Authentication:**
-    -   `POST /auth/token`: Login to get an access token.
-    -   `POST /auth/users/`: Register a new user.
-    -   `GET /auth/users/me/`: Get current user details.
--   **Products:**
-    -   `POST /products/`: Create a new product (requires supplier role).
-    -   `GET /products/`: Get a list of all products.
-    -   `GET /products/{product_id}`: Get a specific product's details and history.
-    -   `PUT /products/{product_id}`: Update a product (requires supplier role).
--   **Events (Shipments):**
-    -   `POST /events/`: Record a new event for a product (requires distributor role).
-    -   `GET /events/product/{product_id}`: Get all events for a specific product.
 
+- **Authentication:**
+  - `POST /auth/token`: Login to get an access token.
+  - `POST /auth/users/`: Register a new user.
+  - `GET /auth/users/me/`: Get current user details.
+- **Products:**
+  - `POST /products/`: Create a new product (requires supplier role).
+  - `GET /products/`: Get a list of all products.
+  - `GET /products/{product_id}`: Get a specific product's details and history.
+  - `PUT /products/{product_id}`: Update a product (requires supplier role).
+- **Events (Shipments):**
+  - `POST /events/`: Record a new event for a product (requires distributor role).
+  - `GET /events/product/{product_id}`: Get all events for a specific product.
 
 ## Further Improvements 💡
 
--   More robust role/permission system.
--   Database migrations using Alembic (especially for PostgreSQL).
--   Enhanced frontend with a JavaScript framework (e.g., Vue, React, Svelte).
--   Unit and integration tests.
--   Input validation on frontend.
--   More detailed event types and statuses.
--   Notifications for event updates.
--   Pagination for long lists in the UI.
--   Dockerization for easier deployment.
+- More robust role/permission system.
+- Database migrations using Alembic (especially for PostgreSQL).
+- Enhanced frontend with a JavaScript framework (e.g., Vue, React, Svelte).
+- Unit and integration tests.
+- Input validation on frontend.
+- More detailed event types and statuses.
+- Notifications for event updates.
+- Pagination for long lists in the UI.
+- Dockerization for easier deployment.

@@ -57,15 +57,15 @@ def create_product_event(db: Session, event: schemas.EventCreate, product_id: in
 
     db_event = models.Event(**event.model_dump(exclude={"product_id"}), product_id=product_id)
     db.add(db_event)
-
-    # Update product's current status and last_updated
-    db_product.current_status = f"{event.event_type} at {event.location}"
+    formatted_event_type = event.event_type.value.replace("_", " ").title()
+    db_product.current_status = f"{formatted_event_type} at {event.location}" # MODIFIED LINE
     db_product.last_updated = datetime.now()
 
     db.commit()
     db.refresh(db_event)
-    db.refresh(db_product) # Refresh product to get updated status
+    db.refresh(db_product) 
     return db_event
+
 
 def get_product_events(db: Session, product_id: int, skip: int = 0, limit: int = 100):
     return db.query(models.Event).filter(models.Event.product_id == product_id).order_by(models.Event.timestamp.desc()).offset(skip).limit(limit).all()
@@ -74,5 +74,5 @@ def get_product_with_history(db: Session, product_id: int):
     product = db.query(models.Product).filter(models.Product.id == product_id).first()
     if product:
         events = db.query(models.Event).filter(models.Event.product_id == product_id).order_by(models.Event.timestamp.asc()).all()
-        product.events = events # Attach events directly for the schema to pick up
+        product.events = events
     return product
